@@ -1,14 +1,15 @@
 using Fusion;
 using LockdownProtocol.Lobby.Invite;
+using LockdownProtocol.Platform;
 using UnityEngine;
 
 namespace LockdownProtocol.Lobby
 {
     public class LobbyPlayerController : NetworkBehaviour
     {
-        private const int MaxNicknameLength = 6;
+        private const int MaxNicknameLength = 12;
 
-        [Networked] public NetworkString<_16> Nickname { get; private set; }
+        [Networked] public NetworkString<_32> Nickname { get; private set; }
         [Networked] public NetworkBool IsReady { get; private set; }
         [Networked] public NetworkBool IsHost { get; private set; }
         [Networked] public NetworkBool IsTalking { get; private set; }
@@ -17,7 +18,7 @@ namespace LockdownProtocol.Lobby
         public event System.Action<bool> ReadyChanged;
 
         private NetworkBootstrap bootstrap; // 닉네임/입장 순서 보관용 (게임 중 플레이어 목록이 사용)
-        private NetworkString<_16> retainedNickname; // 마지막으로 보관한 닉네임
+        private NetworkString<_32> retainedNickname; // 마지막으로 보관한 닉네임
         private int retainedJoinOrder = int.MinValue; // 마지막으로 보관한 입장 순서
 
         public override void Spawned()
@@ -27,7 +28,9 @@ namespace LockdownProtocol.Lobby
             {
                 // 로컬 플레이어 초기 닉네임 세팅: Main 씬에서 입력한 닉네임, 없으면 Player_{번호}
                 string fallback = $"P{Object.InputAuthority.PlayerId}";
-                string nickname = NicknamePopupUI.HasSavedNickname() ? NicknamePopupUI.GetSavedNickname() : fallback;
+                // 저장된 닉네임 > Steam 이름(Steam 초대로 바로 들어온 경우 등) > 기본 이름 순서
+                string nickname = NicknamePopupUI.HasSavedNickname() ? NicknamePopupUI.GetSavedNickname()
+                    : SteamPlatform.TryGetNickname(MaxNicknameLength, out string steamName) ? steamName : fallback;
                 RPC_SetNickname(string.IsNullOrWhiteSpace(nickname) ? fallback : nickname);
 
                 string roomId = RoomManager.Instance != null ? RoomManager.Instance.RoomName.ToString() : null;
@@ -132,7 +135,7 @@ namespace LockdownProtocol.Lobby
             for (int n = 2; n < 100 && isNicknameTaken(candidate); n++)
             {
                 string suffix = $"({n})";
-                candidate = desired + suffix; // 최대 6자 + 4자 = 10자 이내 (NetworkString<_16> 안에 들어감)
+                candidate = desired + suffix; // 최대 12자 + "(99)" 4자 = 16자 (NetworkString<_16> 한도)
             }
             return candidate;
         }

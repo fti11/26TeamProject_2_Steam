@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using LockdownProtocol.Networking;
+using LockdownProtocol.Platform;
 
 namespace LockdownProtocol.Lobby
 {
@@ -41,6 +42,19 @@ namespace LockdownProtocol.Lobby
             joinRoomButton.onClick.AddListener(OnJoinClicked);
             if (quickJoinButton != null) quickJoinButton.onClick.AddListener(OnQuickJoinClicked);
             if (createPanel != null) createPanel.SetActive(false);
+            SteamPlatform.JoinRequested += HandleSteamJoinRequested;
+        }
+
+        private void Start()
+        {
+            HandleSteamJoinRequested(null); //게임을 켜기 전에/메인 화면에서 받아 둔 Steam 초대가 있으면 바로 입장
+        }
+
+        /// <summary>Steam 친구가 [게임 참가]를 눌렀을 때. 기다리는 초대 코드가 있으면 코드 입력과 같은 방식으로 입장한다.</summary>
+        private void HandleSteamJoinRequested(string _)
+        {
+            if (_isBusy) return;
+            if (SteamPlatform.TryConsumePendingJoin(out string code)) JoinByCode(code);
         }
 
         private void OnDisable()
@@ -48,6 +62,7 @@ namespace LockdownProtocol.Lobby
             createRoomButton.onClick.RemoveListener(OnCreateRoomButtonClicked);
             joinRoomButton.onClick.RemoveListener(OnJoinClicked);
             if (quickJoinButton != null) quickJoinButton.onClick.RemoveListener(OnQuickJoinClicked);
+            SteamPlatform.JoinRequested -= HandleSteamJoinRequested;
         }
 
         /// <summary>빠른 입장 - 공개 방 목록 창을 연다. 목록에서 방을 눌러 입장한다 (RoomListUI).</summary>
@@ -75,7 +90,7 @@ namespace LockdownProtocol.Lobby
             createPanel.SetActive(true);
         }
 
-        private async void OnJoinClicked()
+        private void OnJoinClicked()
         {
             if (_isBusy) return;
 
@@ -85,6 +100,14 @@ namespace LockdownProtocol.Lobby
                 ShowFeedback("초대 코드를 입력하세요.");
                 return;
             }
+
+            JoinByCode(inviteCode);
+        }
+
+        /// <summary>초대 코드로 입장. 코드 입력창과 Steam 친구 초대(게임 참가)가 같이 쓴다.</summary>
+        private async void JoinByCode(string inviteCode)
+        {
+            if (_isBusy) return;
 
             _isBusy = true;
             SetInteractable(false);

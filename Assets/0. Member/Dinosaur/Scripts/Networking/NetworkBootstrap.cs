@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fusion;
 using Fusion.Sockets;
 using LockdownProtocol.Lobby;
+using LockdownProtocol.Platform;
 using Photon.Voice.Fusion;
 using Photon.Voice.Unity;
 using UnityEngine;
@@ -166,6 +167,7 @@ public class NetworkBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         if (_leaving) return;
         _leaving = true;
         Debug.Log("[NetworkBootstrap] LeaveRoom 시작");
+        SteamPlatform.ClearRoomPresence(); //Steam 친구 목록의 참가 코드 제거
 
         try { GetSceneRefByName(lobbySceneName); } // 로비 씬이 없으면 세션을 끊기 전에 중단
         catch (Exception exception)
@@ -447,6 +449,7 @@ public class NetworkBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         disconnected = true;
         clearGameResult();
         sessionConnected = false;
+        SteamPlatform.ClearRoomPresence(); //Steam 친구 목록의 참가 코드 제거
         LockdownProtocol.Lobby.Invite.GlobalLobbyInviteTransport.Instance?.UpdateLocalRoomStatus(false, null, false);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -640,6 +643,7 @@ public class NetworkBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         if (runner != _runner || disconnected || _leaving)
             return;
         sessionConnected = true;
+        updateSteamPresence(runner);
         if (runner.IsServer && SceneManager.GetSceneByName(roomSceneName).isLoaded)
         {
             var room = RoomManager.Instance;
@@ -660,6 +664,14 @@ public class NetworkBootstrap : MonoBehaviour, INetworkRunnerCallbacks
         if (resultFeedback != null && runner.SceneManager != null && runner.SceneManager.MainRunnerScene.name == roomSceneName)
             resultFeedback.showAfterSceneLoad(runner, roomSceneName);
     }
+    private void updateSteamPresence(NetworkRunner runner) //Steam 친구 목록에 방 상태 표시 (대기실에서만 [게임 참가] 코드 노출)
+    {
+        if (runner.SessionInfo == null || !runner.SessionInfo.IsValid) return;
+        string sceneName = runner.SceneManager != null ? runner.SceneManager.MainRunnerScene.name : SceneManager.GetActiveScene().name;
+        bool inGame = isGameplayScene(sceneName);
+        SteamPlatform.SetRoomPresence(runner.SessionInfo.Name, !inGame, inGame ? "게임 중" : "대기실");
+    }
+
     public void OnSceneLoadStart(NetworkRunner runner) //각 클라이언트가 씬 제거 전에 확정 규칙 보관
     {
         if (runner == _runner) retainRoomSettings(RoomManager.Instance);

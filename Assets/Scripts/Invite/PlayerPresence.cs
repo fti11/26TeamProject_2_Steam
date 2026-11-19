@@ -6,7 +6,7 @@ namespace LockdownProtocol.Lobby.Invite
     public class PlayerPresence : NetworkBehaviour
     {
         [Networked, Capacity(32)] public string PlayerId { get; private set; }
-        [Networked, Capacity(16)] public string Nickname { get; private set; }
+        [Networked, Capacity(32)] public string Nickname { get; private set; }
         [Networked] public NetworkBool IsInRoom { get; private set; }
         [Networked, Capacity(32)] public string CurrentRoomId { get; private set; }
         [Networked] public NetworkBool IsInGame { get; private set; }

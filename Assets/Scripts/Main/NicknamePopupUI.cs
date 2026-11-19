@@ -2,11 +2,13 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using LockdownProtocol.Platform;
 
 /// <summary>
 /// Main 씬에서 [Start]를 눌렀을 때 뜨는 닉네임 입력 팝업.
 /// 확인하면 닉네임을 PlayerPrefs("Nickname")에 저장하고 Confirmed를 알린다(MainMenuUI가 받아서 로비로 이동).
 /// 저장된 닉네임이 있으면 입력란에 미리 채워 두므로, 다음부터는 [확인]만 누르면 된다.
+/// 저장된 닉네임이 없으면 Steam 이름(Steam 연결 시)을 미리 채워 준다.
 /// 같은 키를 PlayerPresence(초대 시스템)도 읽는다.
 /// </summary>
 public class NicknamePopupUI : MonoBehaviour
@@ -20,7 +22,7 @@ public class NicknamePopupUI : MonoBehaviour
     [SerializeField] private Button cancelButton;
     [SerializeField] private TMP_Text feedbackText;
     [SerializeField, Min(1)] private int minLength = 2;
-    [SerializeField, Min(1)] private int maxLength = 6;
+    [SerializeField, Min(1)] private int maxLength = 12;
 
     public event Action Confirmed;
 
@@ -59,7 +61,7 @@ public class NicknamePopupUI : MonoBehaviour
         popupRoot.SetActive(true);
         if (nicknameInput != null)
         {
-            nicknameInput.text = HasSavedNickname() ? GetSavedNickname() : string.Empty;
+            nicknameInput.text = HasSavedNickname() ? GetSavedNickname() : getSteamNickname();
             nicknameInput.ActivateInputField();
         }
         ShowFeedback(string.Empty);
@@ -89,6 +91,12 @@ public class NicknamePopupUI : MonoBehaviour
 
         Close();
         Confirmed?.Invoke();
+    }
+
+    // 저장된 닉네임이 없을 때 입력란에 미리 채울 Steam 이름 (Steam 미연결이면 빈 칸)
+    private string getSteamNickname()
+    {
+        return SteamPlatform.TryGetNickname(maxLength, out string steamName) ? steamName : string.Empty;
     }
 
     // 앞뒤 공백 제거 + 리치 텍스트 태그로 쓰일 수 있는 < > 제거

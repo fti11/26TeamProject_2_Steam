@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using LockdownProtocol.Platform;
 
 public class MainMenuUI : MonoBehaviour
 {
@@ -29,6 +30,13 @@ public class MainMenuUI : MonoBehaviour
     private void OnStartClicked()
     {
         if (_loading) return;
+
+        // Steam 으로 실행 중이면 Steam 이름이 곧 닉네임이므로 팝업 없이 바로 로비로 이동
+        if (SteamPlatform.TryGetNickname(SteamPlatform.NicknameMaxLength, out _))
+        {
+            LoadLobby();
+            return;
+        }
 
         // 닉네임 팝업이 연결돼 있으면 먼저 닉네임을 받고, 없으면 바로 이동
         if (nicknamePopup != null) nicknamePopup.Open();
